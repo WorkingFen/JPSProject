@@ -149,7 +149,7 @@ conds_achieved([HeadGoal|Rest], State) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura konkretyzująca zmienne
 
-inst(X/Y, State, X) :-
+inst(X/Y, _, X) :-
 	var(X),
 	var(Y),
 	fail.
@@ -158,23 +158,27 @@ inst(X/Y, State, X) :-
 	nonvar(Y),
 	goal_achieved(Y, State).
 	
-inst(X, State, X) :-
+inst(X, _, X) :-
 	no_slash(X).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura czy zmienne są różne
 
 diff(X/_, Y/_) :-
-	X /= Y.
+	% dif(X, Y).
+	X \= Y.
 	
 diff(X/_, Y) :-
-	X /= Y.
+	% dif(X, Y).
+	X \= Y.
 
 diff(X, Y/_) :-
-	X /= Y.
+	% dif(X, Y).
+	X \= Y.
 
 diff(X, Y) :-
-	X /= Y.
+	% dif(X, Y).
+	X \= Y.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -209,7 +213,7 @@ choose_goal(Goal, [X|RestGoals], [X|Rest], State) :-
 
 achieves(on(X, Y), move(X, Z/(on(X,Z)), Y)).
 
-achieves(clear(X), move(X/on(X,Y), Y, Z)).
+achieves(clear(X), move(X/on(X,Y), Y, _)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa warunki (CondGoals) wykonania podanej akcji (Action),
