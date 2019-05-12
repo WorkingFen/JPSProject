@@ -21,14 +21,22 @@
 % jest równy stanowi finalnemu
 
 plan(State, Goals, [], State) :-
-	goals_achieved(Goals, State).
+	my_trace(1,plan, 1,['State'/State, 'Goals'/Goals]),
+	my_trace(2,plan, 1,goals_achieved),
+	goals_achieved(Goals, State),
+	my_trace(3,plan, 1,goals_achieved, ['State'/State, 'Goals'/Goals]),
+	my_trace(4,plan, 1, ['State'/State, 'Goals'/Goals]).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 % Wariant 2 planu, który wykonuje określone akcje
 % aby dojść do stanu finalnego.
 
 plan(InitState, Goals, Plan, FinalState) :-
+	my_trace(1,plan, 2,['InitState'/InitState]),
+	my_trace(2,plan, 2,choose_goal),
 	choose_goal(Goal, Goals, RestGoals, InitState),
+	my_trace(1,plan, 2,['InitState'/InitState]),
 	achieves(Goal, Action),
 	requires(Action, CondGoals),
 	plan(InitState, CondGoals, PrePlan, State1),
@@ -44,10 +52,18 @@ plan(InitState, Goals, Plan, FinalState) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementacja procedury standardowej member(X, Y).
 
-part_of(Member, [Member|_]).
+part_of(Member, Member) :-
+	my_trace(1,part_of, 0,['Member'/Member]).
+	
+part_of(Member, [Member|_]) :-
+	my_trace(1,part_of, 1,['Member'/Member]).
 
 part_of(Member, [_|ListRest]) :-
-	part_of(Member, ListRest).	
+	my_trace(1,part_of, 2,['Member'/Member]),
+	my_trace(2,part_of, 2,part_of),
+	part_of(Member, ListRest),
+	my_trace(3,part_of, 2,part_of, ['Member'/Member, 'ListRest'/ListRest]),
+	my_trace(4,part_of, 2, ['Member'/Member, 'ListRest'/ListRest]).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura sprawdzająca, czy zmienna nie posiada
@@ -99,10 +115,18 @@ goal_achieved(on(X/Cond, Y/Cond2), State) :-
 % Procedura usuwająca elementy z listy
 
 remove([First|Rest], X, Rest) :-
-	part_of(X, First).
+	my_trace(1,remove, 1,['First'/First, 'Rest'/Rest, 'X'/X]),
+	my_trace(2,remove, 1,part_of),
+	part_of(X, First),
+	my_trace(3,remove, 1,part_of, ['First'/First, 'Rest'/Rest, 'X'/X]),
+	my_trace(4,remove, 1, ['First'/First, 'Rest'/Rest, 'X'/X]).
 
 remove([First|RestList], X, [First|Rest]) :-
-	remove(RestList, X, Rest).
+	my_trace(1,remove, 2,['First'/First, 'RestList'/RestList, 'X'/X]),
+	my_trace(2,remove, 2,remove),
+	remove(RestList, X, Rest),
+	my_trace(3,remove, 2,remove, ['Rest'/Rest, 'RestList'/RestList, 'X'/X]),
+	my_trace(4,remove, 2, ['First'/First, 'Rest'/Rest, 'RestList'/RestList, 'X'/X]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura łącząca
@@ -213,7 +237,7 @@ choose_goal(Goal, [X|RestGoals], [X|Rest], State) :-
 
 achieves(on(X, Y), move(X, Z/(on(X,Z)), Y)).
 
-achieves(clear(X), move(X/on(X,Y), Y, _)).
+achieves(clear(X), move(Y/on(Y,X), X, _)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa warunki (CondGoals) wykonania podanej akcji (Action),
