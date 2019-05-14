@@ -21,11 +21,11 @@
 % jest równy stanowi finalnemu
 
 plan(State, Goals, [], State) :-
-	%my_trace(1,plan, 1,['State'/State, 'Goals'/Goals]),
-	%my_trace(2,plan, 1,goals_achieved),
-	goals_achieved(Goals, State).
-	%my_trace(3,plan, 1,goals_achieved, ['State'/State, 'Goals'/Goals]),
-	%my_trace(4,plan, 1, ['State'/State, 'Goals'/Goals]).
+	my_trace(1,plan, 1,['State'/State, 'Goals'/Goals]),
+	my_trace(2,plan, 1,goals_achieved),
+	goals_achieved(Goals, State),
+	my_trace(3,plan, 1,goals_achieved, ['State'/State, 'Goals'/Goals]),
+	my_trace(4,plan, 1, ['State'/State, 'Goals'/Goals]).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
@@ -52,7 +52,7 @@ plan(InitState, Goals, Plan, FinalState) :-
 	my_trace(1,plan, 2,['Action'/Action]),
 	my_trace(2,plan, 2,inst_action),
 	inst_action(Action, CondGoals, State1, InstAction),
-	my_trace(3,plan, 2,plan, ['Action'/Action, 'Goal'/Goal, 'State1'/State1, 'InstAction'/InstAction]),
+	my_trace(3,plan, 2,inst_action, ['Action'/Action, 'Goal'/Goal, 'State1'/State1, 'InstAction'/InstAction]),
 	my_trace(1,plan, 2,['State1'/State1, 'InstAction'/InstAction]),
 	my_trace(2,plan, 2,perform_action),
 	perform_action(State1, InstAction, State2), !,
@@ -73,12 +73,14 @@ plan(InitState, Goals, Plan, FinalState) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementacja procedury standardowej member(X, Y).
 
-part_of(Member, Member).
-	
-part_of(Member, [Member|_]).
 
-part_of(Member, [_|ListRest]) :-
-	part_of(Member, ListRest).
+part_of(Member, Member, _). %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LISTA UŻYTYCH
+	
+part_of(Member, [Member|_], Gowno):-
+	/+part_of(Member, Gowno, []).
+
+part_of(Member, [_|ListRest], Gowno) :-
+	part_of(Member, ListRest, Gowno).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura sprawdzająca, czy zmienna nie posiada
@@ -93,33 +95,39 @@ no_slash(X) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura sprawdzająca spełnienie celu w zadanym stanie.
 
-goal_achieved(clear(X), State) :-
+goal_achieved(clear(X), State, [clear(X)|XD]) :- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LISTA UŻYTYCH
+	my_trace(1,goal_achieved, 0,[]),
 	no_slash(X),
-	part_of(clear(X), State).
+	part_of(clear(X), State, XD).
 	
 goal_achieved(clear(X/Cond), State) :-
+	my_trace(1,goal_achieved, 1,[]),
 	nonvar(Cond),
 	goal_achieved(Cond, State),
 	part_of(clear(X), State).
 	
 goal_achieved(on(X,Y), State) :-
+	my_trace(1,goal_achieved, 2,[]),
 	no_slash(X),
 	no_slash(Y),
 	part_of(on(X,Y), State).
 	
 goal_achieved(on(X/Cond, Y), State) :-
+	my_trace(1,goal_achieved, 3,[]),
 	no_slash(Y),
 	nonvar(Cond),
 	goal_achieved(Cond, State),
 	part_of(on(X,Y), State).
 
 goal_achieved(on(X, Y/Cond), State) :-
+	my_trace(1,goal_achieved, 4,[]),
 	no_slash(X),
 	nonvar(Cond),
 	goal_achieved(Cond, State),
 	part_of(on(X,Y), State).
 	
 goal_achieved(on(X/Cond, Y/Cond2), State) :-
+	my_trace(1,goal_achieved, 5,[]),
 	nonvar(Cond),
 	nonvar(Cond2),
 	goal_achieved(Cond, State),
@@ -196,20 +204,20 @@ inst(X, _, X) :-
 % Procedura czy zmienne są różne
 
 diff(X/_, Y/_) :-
-	% dif(X, Y).
-	X \= Y.
+	dif(X, Y).
+	% X \= Y.
 	
 diff(X/_, Y) :-
-	% dif(X, Y).
-	X \= Y.
+	dif(X, Y).
+	% X \= Y.
 
 diff(X, Y/_) :-
-	% dif(X, Y).
-	X \= Y.
+	dif(X, Y).
+	% X \= Y.
 
 diff(X, Y) :-
-	% dif(X, Y).
-	X \= Y.
+	dif(X, Y).
+	% X \= Y.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -219,12 +227,13 @@ diff(X, Y) :-
 % Cele mogą być zarówno ukonkretnione, jak i nie.
 % goals_achieved(Goals, State).
 
-goals_achieved([], _).
-	%my_trace(1,goals_achieved, 11,[]).
+goals_achieved([], _) :-
+	my_trace(1,goals_achieved, 1,[]).
 
 goals_achieved([Goal|Rest], State) :-
-	%my_trace(1,goals_achieved, 11,['Goal'/Goal, 'State'/State]),
+	my_trace(1,goals_achieved, 2,['Goal'/Goal, 'State'/State]),
 	goal_achieved(Goal, State),
+	my_trace(3,goals_achieved, 2, goals_achieved,['Goal'/Goal, 'State'/State]),
 	goals_achieved(Rest, State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -257,7 +266,7 @@ choose_goal(Goal, [X|RestGoals], [X|Rest], State) :-
 
 achieves(on(X, Y), move(X, Z/(on(X,Z)), Y)).
 
-achieves(clear(X), move(Y/on(Y,X), X, Z)).
+achieves(clear(X), move(Y/on(Y,X), X, Z/clear(Z))).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa warunki (CondGoals) wykonania podanej akcji (Action),
@@ -288,12 +297,21 @@ requires(move(X, Y/on(X,Y), Z), [clear(X), clear(Z), on(X, Y)]) :-
 	nonvar(Z),
 	my_trace(4,requires, 2, []).
 
+requires(move(X/on(X,Y), Y, Z), [clear(X), clear(Z), on(X,Y)]) :-
+	my_trace(1,requires, 3,['move(X/on(X,Y), Y, Z)'/move(X/on(X,Y), Y, Z), '[clear(X), clear(Z), on(X, Y)]'/[clear(X), clear(Z), on(X, Y)]]),
+	my_trace(2,requires, 3,nonvar),
+	nonvar(Y),
+	my_trace(2,requires, 3,nonvar),
+	nonvar(Z),
+	my_trace(4,requires, 3, []).
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Ukonkretnia akcję (Action) przed wykonaniem. 
 % inst_action(Action, Goal, State, InstAction).
 
 inst_action(move(X, Y, Z), Conds, State, move(InstX, InstY, InstZ)) :-
-	%my_trace(1,inst_action, 1,['move(X, Y, Z)'/move(X, Y, Z), 'Conds'/Conds, 'State'/State]),
+	my_trace(1,inst_action, 1,['move(X, Y, Z)'/move(X, Y, Z), 'Conds'/Conds, 'State'/State]),
 	inst(X, State, InstX),
 	inst(Y, State, InstY),
 	inst(Z, State, InstZ),
