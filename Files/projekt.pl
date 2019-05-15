@@ -50,9 +50,6 @@ plan(InitState, Goals, Plan, FinalState) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementacja procedury standardowej member(X, Y).
 
-
-part_of(Member, Member). %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LISTA UŻYTYCH
-	
 part_of(Member, [Member|_]).
 
 part_of(Member, [_|ListRest]) :-
@@ -71,44 +68,44 @@ no_slash(X) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura sprawdzająca spełnienie celu w zadanym stanie.
 
-goal_achieved(clear(X), State) :- %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LISTA UŻYTYCH
+goal_achieved(clear(X), State) :-
 	no_slash(X),
-	member(clear(X), State).
+	part_of(clear(X), State).
 	
 goal_achieved(clear(X/Cond), State) :-
 	nonvar(Cond),
 	goal_achieved(Cond, State),
-	member(clear(X), State).
+	part_of(clear(X), State).
 	
 goal_achieved(on(X,Y), State) :-
 	no_slash(X),
 	no_slash(Y),
-	member(on(X,Y), State).
+	part_of(on(X,Y), State).
 	
 goal_achieved(on(X/Cond, Y), State) :-
 	no_slash(Y),
 	nonvar(Cond),
 	goal_achieved(Cond, State),
-	member(on(X,Y), State).
+	part_of(on(X,Y), State).
 
 goal_achieved(on(X, Y/Cond), State) :-
 	no_slash(X),
 	nonvar(Cond),
 	goal_achieved(Cond, State),
-	member(on(X,Y), State).
+	part_of(on(X,Y), State).
 	
 goal_achieved(on(X/Cond, Y/Cond2), State) :-
 	nonvar(Cond),
 	nonvar(Cond2),
 	goal_achieved(Cond, State),
 	goal_achieved(Cond2, State),
-	member(on(X,Y), State).
+	part_of(on(X,Y), State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Procedura usuwająca elementy z listy
 
 remove([First|Rest], X, Rest) :-
-	part_of(X, First).
+	part_of(X, [First]).
 
 remove([First|RestList], X, [First|Rest]) :-
 	remove(RestList, X, Rest).
@@ -120,26 +117,6 @@ conc([], X, X).
 
 conc([Head|Tail], X, [Head|Tail2]) :-
 	conc(Tail, X, Tail2).
-	
-	
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Procedura czy zmienne są różne
-
-diff(X/_, Y/_) :-
-	% dif(X, Y).
-	X \= Y.
-	
-diff(X/_, Y) :-
-	% dif(X, Y).
-	X \= Y.
-
-diff(X, Y/_) :-
-	% dif(X, Y).
-	X \= Y.
-
-diff(X, Y) :-
-	% dif(X, Y).
-	X \= Y.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -188,24 +165,28 @@ requires(move(X, _, Z), [clear(X), clear(Z)]) :-
 	
 requires(move(X/C, _, _), [clear(X/C)]).
 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Ukonkretnia akcję (Action) przed wykonaniem. 
 % inst_action(Action, Goal, State, InstAction).
 
 inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
-    inst1(X, Cond, State, InstX),
+    inst1(X, Cond, State, InstX, Rest),
 	inst2(Y, Cond, State, InstY),
-	inst3(Z, Cond, State, InstZ).
+	inst3(Z, Cond, Rest, InstZ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dla warunku on() - X ukonkretnione
-inst1(X, on(X,_), _, X).
+inst1(X, on(X,_), _, X, _).
 
-% Dla warunku clear() - jest struktura
-inst1(X, clear(_), State, X) :-
-	goal_achieved(X, State).
+% Dla warunku clear() - 
+% gdy zmienna jest ukonkretniona
+inst1(X, clear(_), _, X, _) :-
+	no_slash(X).
+
+% jest struktura
+inst1(X/Cond, clear(_), State, X, Rest) :-
+	goal_achieved(Cond, State),
+    remove(State, clear(X), Rest).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dla warunku clear() - Y ukonkretnione
@@ -213,21 +194,21 @@ inst2(Y, clear(_), _, Y):-
 	no_slash(Y).
 
 % struktura
-inst2(Y, clear(_), State, Y):-
-	goal_achieved(Y, State).
+inst2(Y/Cond, clear(_), State, Y):-
+	goal_achieved(Cond, State).
 
 % Dla warunku on() - Y jest struktura
-inst2(Y, on(Y,_), State, Y) :-
-	goal_achieved(Y, State).
+inst2(Y/Cond, on(_,_), State, Y) :-
+	goal_achieved(Cond, State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dla warunku clear() -
 % Z ukonkretnione
-inst3(Z, on(Z,_), _, Z).
+inst3(Z, on(_,Z), _, Z).
 
 % Z jest strukturą
-inst3(Z, clear(_), State, Z):-
-    goal_achieved(Z, State).
+inst3(Z/Cond, clear(_), State, Z):-
+    goal_achieved(Cond, State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa stan (State2) osiągany ze stanu (State1)
