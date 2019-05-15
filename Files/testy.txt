@@ -1,2 +1,2 @@
- plan([on(b4,p1), on(b2,p2), clear(b4), clear(b2)], [on(b4,b2)], Brak, Fin). % DZIAŁA
- plan([on(b3,b1), on(b1,b4), on(b4,p1), on(b2,p3), clear(b3), clear(p2), clear(b2), clear(p4)], [on(b4,b2)], Brak, Fin). %nie działa
+plan([on(b4,p1), on(b2,p2), clear(b4), clear(b2)], [on(b4,b2)], Brak, Fin). % DZIAŁA
+plan([on(b3,b1), on(b1,b4), on(b4,p1), on(b2,p3), clear(b3), clear(p2), clear(b2), clear(p4)], [on(b4,b2)], Brak, Fin). 
