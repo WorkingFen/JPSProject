@@ -20,36 +20,55 @@
 % goals_achieved(Goals, State), gdy stan początkowy 
 % jest równy stanowi finalnemu
 
-plan(State, Goals, [], State) :-
+plan(State, Goals, _, _, [], State) :-
 	goals_achieved(Goals, State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 % Wariant 2 planu, który wykonuje określone akcje
 % aby dojść do stanu finalnego.
 
-plan(InitState, Goals, Plan, FinalState) :-
+plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
 
+    Limit > 0,
+    
+    generate_limit_pre(LimitPre,0, Limit),
+    
 	choose_goal(Goal, Goals, RestGoals, InitState),
 
 	achieves(Goal, Action),
 
 	requires(Action, CondGoals),
 
-	plan(InitState, CondGoals, PrePlan, State1),
+	plan(InitState, CondGoals, AchievedGoals, LimitPre, PrePlan, State1),
 
 	inst_action(Action, Goal, State1, InstAction),
 
+    check_action(InstAction, AchievedGoals),
+    
 	perform_action(State1, InstAction, State2), !,
 
-	plan(State2, RestGoals, PostPlan, FinalState),
+    LimitPost is Limit - LimitPre - 1,
+    
+	plan(State2, RestGoals, [Goal|AchievedGoals], LimitPost, PostPlan, FinalState),
 
 	conc(PrePlan, [InstAction|PostPlan], Plan).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Wszystkie procedury, które nie są ściśle powiązane z innymi
 % ale potrzebne są, aby procedury poprawnie działały
+% 
+generate_limit_pre(Limit, Limit, _).
+
+generate_limit_pre(LimitPre,Limit,UpperLimit) :-
+    NewLimit is Limit+1,
+    NewLimit < UpperLimit,
+	generate_limit_pre(LimitPre, NewLimit, UpperLimit). % potrzebne????
+
+check_action(move(X,Y,Z), AchievedGoals) :-
+    \+ part_of(on(X,Y), AchievedGoals),
+    \+ part_of(clear(Z), AchievedGoals).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementacja procedury standardowej member(X, Y).
-
 part_of(Member, [Member|_]).
 
 part_of(Member, [_|ListRest]) :-
@@ -170,9 +189,15 @@ requires(move(X/C, _, _), [clear(X/C)]).
 % inst_action(Action, Goal, State, InstAction).
 
 inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
+    %nl,nl, write('Wpisz, gdzie chcesz przenieść klocek: '),nl,
+	%write('move('), write(X), write(','), write(Y), write(',?)'), nl,
+    %read(UserInput),
+    %nl,write('No to przenosimy na '), write(UserInput),nl,
+
     inst1(X, Cond, State, InstX, Rest),
 	inst2(Y, Cond, State, InstY),
 	inst3(Z, Cond, Rest, InstZ).
+	%write('move('), write(X), write(','), write(Y), write(','), write(Z),write(')'), nl.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dla warunku on() - X ukonkretnione

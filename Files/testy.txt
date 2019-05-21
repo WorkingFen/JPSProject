@@ -1,2 +1,5 @@
-plan([on(b4,p1), on(b2,p2), clear(b4), clear(b2)], [on(b4,b2)], Brak, Fin). % DZIAŁA
-plan([on(b3,b1), on(b1,b4), on(b4,p1), on(b2,p3), clear(b3), clear(p2), clear(b2), clear(p4)], [on(b4,b2)], Brak, Fin). 
+plan([on(b4,p1), on(b2,p2), clear(b4), clear(b2)], [on(b4,b2)], Plan, Fin). % DZIAŁA
+plan([on(b3,b1), on(b1,b4), on(b4,p1), on(b2,p3), clear(b3), clear(p2), clear(b2), clear(p4)], [on(b4,b2)], Plan, Fin). 
+
+dla limit i achievedgoals:
+plan([on(b3,b1), on(b1,b4), on(b4,p1), on(b2,p3), clear(b3), clear(p2), clear(b2), clear(p4)], [on(b4,b2)],[], 3, Plan, Fin).
