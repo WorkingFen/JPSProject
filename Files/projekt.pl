@@ -185,19 +185,44 @@ requires(move(X, _, Z), [clear(X), clear(Z)]) :-
 requires(move(X/C, _, _), [clear(X/C)]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Y - klocek który przesuwamy
+get_clear([],_, []).
+
+get_clear([clear(X)|Rest], Y/_, [X|RestClear]):-
+    X \= Y, !,
+    get_clear(Rest, Y, RestClear).
+    
+get_clear([clear(X)|Rest], Y, [X|RestClear]):-
+    no_slash(Y),
+    X \= Y, !,
+    get_clear(Rest, Y, RestClear).
+
+get_clear([clear(_)|Rest], Y, Clear):-
+    get_clear(Rest,Y,Clear).
+
+get_clear([on(_,_)|Rest], Y, Clear):-
+    get_clear(Rest, Y, Clear).
 % Ukonkretnia akcję (Action) przed wykonaniem. 
 % inst_action(Action, Goal, State, InstAction).
 
-inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
-    %nl,nl, write('Wpisz, gdzie chcesz przenieść klocek: '),nl,
-	%write('move('), write(X), write(','), write(Y), write(',?)'), nl,
-    %read(UserInput),
-    %nl,write('No to przenosimy na '), write(UserInput),nl,
+handle_input(Input, Clear):-
+    part_of(Input, Clear), !.
 
+inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
+    get_clear(State, X, Clear),
+    nl,nl, write('Gdzie chcesz przenieść klocek '),write(X),write('?'),nl,
+	write('Wolne miejsca: '),write(Clear), nl,
+    read(UserInput),
+    handle_input(UserInput, Clear), % zwróci fałsz, jeśli Input nie należy do Clear
+    inst1(X, Cond, State, InstX, Rest), write(Rest),
+	inst2(Y, Cond, State, InstY),
+	write('Utworzona akcja: move('), write(X), write(','), write(Y), write(','), write(UserInput),write(')'), nl.
+
+inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
     inst1(X, Cond, State, InstX, Rest),
 	inst2(Y, Cond, State, InstY),
 	inst3(Z, Cond, Rest, InstZ).
-	%write('move('), write(X), write(','), write(Y), write(','), write(Z),write(')'), nl.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dla warunku on() - X ukonkretnione
