@@ -20,6 +20,13 @@
 % goals_achieved(Goals, State), gdy stan początkowy 
 % jest równy stanowi finalnemu
 
+wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
+	plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState).
+    
+wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
+    Limit is Limit + 1,
+    wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState).
+
 plan(State, Goals, _, _, [], State) :-
 	goals_achieved(Goals, State).
 
@@ -206,23 +213,30 @@ get_clear([on(_,_)|Rest], Y, Clear):-
 % Ukonkretnia akcję (Action) przed wykonaniem. 
 % inst_action(Action, Goal, State, InstAction).
 
-handle_input(Input, Clear):-
-    part_of(Input, Clear), !.
-
-inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
+handle_input(State, X, UserInput,Clear):-
     get_clear(State, X, Clear),
     nl,nl, write('Gdzie chcesz przenieść klocek '),write(X),write('?'),nl,
 	write('Wolne miejsca: '),write(Clear), nl,
     read(UserInput),
-    handle_input(UserInput, Clear), % zwróci fałsz, jeśli Input nie należy do Clear
+    process_input(State, X, UserInput, Clear).
+
+process_input(_, _, Input, _):-
+    Input \= 'nawrut'.
+
+process_input(State, X, Input, Clear) :-
+    Input \= 'nawrut',
+	handle_input(State, X, Input, Clear).
+
+inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
+	handle_input(State, X, UserInput, _),
     inst1(X, Cond, State, InstX, Rest), write(Rest),
 	inst2(Y, Cond, State, InstY),
-	write('Utworzona akcja: move('), write(X), write(','), write(Y), write(','), write(UserInput),write(')'), nl.
+	nl,write('Utworzona akcja: move('), write(X), write(','), write(Y), write(','), write(UserInput),write(')'), nl.
 
-inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
-    inst1(X, Cond, State, InstX, Rest),
-	inst2(Y, Cond, State, InstY),
-	inst3(Z, Cond, Rest, InstZ).
+%inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
+%    inst1(X, Cond, State, InstX, Rest),%
+%	inst2(Y, Cond, State, InstY),
+%	inst3(Z, Cond, Rest, InstZ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Dla warunku on() - X ukonkretnione
