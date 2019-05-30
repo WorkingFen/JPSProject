@@ -16,16 +16,19 @@
 % PostPlan		skonstruowany postplan
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Wariant 1 planu, który wykonuje procedurę 
-% goals_achieved(Goals, State), gdy stan początkowy 
-% jest równy stanowi finalnemu
+% Wrappery potrzebne aby móc zwiększać limit
 
 wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
 	plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState).
     
 wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
-    Limit is Limit + 1,
-    wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState).
+    NewLimit is Limit + 1,
+    wrapper(InitState, Goals, AchievedGoals, NewLimit, Plan, FinalState).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Wariant 1 planu, który wykonuje procedurę 
+% goals_achieved(Goals, State), gdy stan początkowy 
+% jest równy stanowi finalnemu
 
 plan(State, Goals, _, _, [], State) :-
 	goals_achieved(Goals, State).
@@ -65,14 +68,14 @@ plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
 % 
 generate_limit_pre(Limit, Limit, _).
 
-generate_limit_pre(LimitPre,Limit,UpperLimit) :-
+generate_limit_pre(LimitPre, Limit, UpperLimit) :-
     NewLimit is Limit+1,
     NewLimit < UpperLimit,
-	generate_limit_pre(LimitPre, NewLimit, UpperLimit). % potrzebne????
+	generate_limit_pre(LimitPre, NewLimit, UpperLimit).
 
 check_action(move(X,Y,Z), AchievedGoals) :-
-    \+ part_of(on(X,Y), AchievedGoals),
-    \+ part_of(clear(Z), AchievedGoals).
+    \+part_of(on(X,Y), AchievedGoals),
+    \+part_of(clear(Z), AchievedGoals).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Implementacja procedury standardowej member(X, Y).
@@ -164,8 +167,6 @@ goals_achieved([Goal|Rest], State) :-
 % Pozostałe cele zapisuje do RestGoals.
 % choose_goal(Goal, Goals, RestGoals, State).
 
-%choose_goal(Goal, [], Rest, State) :-
-
 choose_goal(Goal, [Goal|Rest], Rest, State) :-
 	\+goal_achieved(Goal, State).
 	
@@ -177,9 +178,9 @@ choose_goal(Goal, [X|RestGoals], [X|Rest], State) :-
 % Cel może być zarówno ukonkretniony, jak i nie.
 % achieves(Goal, Action).
 
-achieves(on(X, Y), move(X, Z/(on(X,Z)), Y)).
+achieves(on(X, Y), move(X, Z/(on(X, Z)), Y)).
 
-achieves(clear(X), move(Y/on(Y,X), X, Z/clear(Z))).
+achieves(clear(X), move(Y/on(Y, X), X, Z/clear(Z))).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa warunki (CondGoals) wykonania podanej akcji (Action),
@@ -210,10 +211,11 @@ get_clear([clear(_)|Rest], Y, Clear):-
 
 get_clear([on(_,_)|Rest], Y, Clear):-
     get_clear(Rest, Y, Clear).
+
 % Ukonkretnia akcję (Action) przed wykonaniem. 
 % inst_action(Action, Goal, State, InstAction).
 
-handle_input(State, X, UserInput,Clear):-
+handle_input(State, X, UserInput, Clear):-
     get_clear(State, X, Clear),
     nl,nl, write('Gdzie chcesz przenieść klocek '),write(X),write('?'),nl,
 	write('Wolne miejsca: '),write(Clear), nl,
@@ -232,6 +234,10 @@ inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
     inst1(X, Cond, State, InstX, Rest), write(Rest),
 	inst2(Y, Cond, State, InstY),
 	nl,write('Utworzona akcja: move('), write(X), write(','), write(Y), write(','), write(UserInput),write(')'), nl.
+
+inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
+    nl, write('Nawrót'), nl,
+    inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)).
 
 %inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
 %    inst1(X, Cond, State, InstX, Rest),%
