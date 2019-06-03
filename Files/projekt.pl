@@ -16,30 +16,120 @@
 % PostPlan		skonstruowany postplan
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Procedury opisujące wykonanie programu.
+% 
+% Działanie w rekurencji
+% wymaga dodatkowego argumentu wejściowego
+% w śledzonej procedurze określający aktualny
+% poziom rekurencji.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Procedura bez sprawdzania rekurencji
+% Wariant 1: w celu wyprowadzenia wartości zmiennych
+% na wejściu do procedury
+log(1, ProcName, Clause, ArgList) :-
+    nl, write('WEJŚCIE'),
+	nl, write(ProcName),
+	write(' typ: '), write(Clause),
+	write_args(ArgList), nl, read(_).
+
+% Wariant 2: w celu wyprowadzenia wartości zmiennych
+% na zakończenie procedury
+log(2, ProcName, Clause, ArgList) :-
+	nl, write('WYJŚCIE'),
+    nl, write(ProcName),
+	write(' typ: '), write(Clause),
+	write_args(ArgList), nl.
+
+% Wariant 3: w celu wyprowadzenia wartości zmiennych
+% wraz z informacją o zmianie typu procedury
+log(3, ProcName, Clause, ArgList) :-
+	nl, write('NIEPOWODZENIE'),
+    nl, write(ProcName),
+	write(' typ: '), write(Clause),
+	write_args(ArgList), nl.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Procedura ze sprawdzaniem rekurencji
+% Wariant 1: w celu wyprowadzenia wartości zmiennych
+% na wejściu do procedury rekurencyjnej
+rec_log(1, ProcName, Clause, Level, ArgList) :-
+    nl, write('WEJŚCIE NA POZIOMIE '),write(Level),
+	nl, write(ProcName),
+    write(' typ: '), write(Clause),
+	write_args(ArgList), nl, read(_).
+
+% Wariant 2: w celu wyprowadzenia wartości zmiennych
+% na zakończenie procedury na danym poziomie rekurencji
+rec_log(2, ProcName, Clause, Level, ArgList) :-
+	nl, write('WYJŚCIE NA POZIOMIE '),write(Level),
+    nl, write(ProcName),
+	write(' typ: '), write(Clause),
+	write_args(ArgList), nl,
+	end_log(Level, ProcName).
+
+% Wariant 3: w celu wyprowadzenia wartości zmiennych
+% wraz z informacją o zmianie typu procedury
+% na danym poziomie rekurencji
+rec_log(3, ProcName, Clause, Level, ArgList) :-
+    nl,write('NIEPOWODZENIE NA POZIOMIE '),write(Level),
+	nl, write(ProcName),
+	write(' typ: '), write(Clause),
+	write_args(ArgList), nl.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Dodatkowe procedury wspierające tworzenie logów
+
+write_args([]).
+
+write_args([First|Rest]) :-
+	write_one_arg(First),
+	write_args(Rest).
+
+write_one_arg(Name/Val)  :-
+	nl, write(Name), write('='), write(Val).
+
+end_log(0, ProcName)  :-
+	nl,  nl,  write('KONIEC ŚLEDZENIA  '), write(ProcName), nl, nl.
+
+end_log(Level,_)  :-
+	Level > 0,
+	nl, read(_).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Wrappery potrzebne aby móc zwiększać limit
 
-wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
-	plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState).
+wrapper(InitState, Goals, Limit, Plan, FinalState) :-		% AchievedGoals? Nie potrzebne raczej
+    log(1, 'Wrapper', 1, ['InitState'/InitState, 'Goals'/Goals, 'Limit'/Limit]),
+	plan(InitState, Goals, [], Limit, Plan, FinalState, 0),
+    log(2, 'Wrapper', 1, ['Plan'/Plan, 'Fin'/FinalState]).
     
-wrapper(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
+wrapper(InitState, Goals, Limit, Plan, FinalState) :-
+    log(3, 'Wrapper', 1, ['InitState'/InitState, 'Goals'/Goals, 'Limit'/Limit]),
+    % Tutaj jakieś dodatkowe info, czy coś?
     NewLimit is Limit + 1,
-    wrapper(InitState, Goals, AchievedGoals, NewLimit, Plan, FinalState).
+    wrapper(InitState, Goals, NewLimit, Plan, FinalState).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Wariant 1 planu, który wykonuje procedurę 
 % goals_achieved(Goals, State), gdy stan początkowy 
 % jest równy stanowi finalnemu
 
-plan(State, Goals, _, _, [], State) :-
-	goals_achieved(Goals, State).
+plan(State, Goals, _, _, [], State, Level) :-
+    rec_log(1, 'Plan', 1, Level, ['State'/State, 'Goals'/Goals]),
+	goals_achieved(Goals, State),
+    rec_log(2, 'Plan', 1, Level, ['State'/State, 'Goals'/Goals]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 % Wariant 2 planu, który wykonuje określone akcje
 % aby dojść do stanu finalnego.
 
-plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
-
+plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState, Level) :-
+    rec_log(3, 'Plan', 1, Level, ['State'/InitState, 'Goals'/Goals]),
+	rec_log(1, 'Plan', 2, Level, ['State'/InitState, 'Goals'/Goals, 'AchievedGoals'/AchievedGoals]),
+    
     Limit > 0,
+    
+    NewLevel is Level + 1,
     
     generate_limit_pre(LimitPre,0, Limit),
     
@@ -49,7 +139,7 @@ plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
 
 	requires(Action, CondGoals),
 
-	plan(InitState, CondGoals, AchievedGoals, LimitPre, PrePlan, State1),
+	plan(InitState, CondGoals, AchievedGoals, LimitPre, PrePlan, State1, NewLevel),
 
 	inst_action(Action, Goal, State1, InstAction),
 
@@ -59,9 +149,11 @@ plan(InitState, Goals, AchievedGoals, Limit, Plan, FinalState) :-
 
     LimitPost is Limit - LimitPre - 1,
     
-	plan(State2, RestGoals, [Goal|AchievedGoals], LimitPost, PostPlan, FinalState),
+	plan(State2, RestGoals, [Goal|AchievedGoals], LimitPost, PostPlan, FinalState, NewLevel),
 
-	conc(PrePlan, [InstAction|PostPlan], Plan).
+	conc(PrePlan, [InstAction|PostPlan], Plan),
+    
+    rec_log(2, 'Plan', 2, Level, ['Limit'/Limit, 'Plan'/Plan, 'Fin'/FinalState]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Wszystkie procedury, które nie są ściśle powiązane z innymi
 % ale potrzebne są, aby procedury poprawnie działały
@@ -168,29 +260,43 @@ goals_achieved([Goal|Rest], State) :-
 % choose_goal(Goal, Goals, RestGoals, State).
 
 choose_goal(Goal, [Goal|Rest], Rest, State) :-
-	\+goal_achieved(Goal, State).
+    log(1, 'Choose_goal', 1, ['GoalList'/[Goal|Rest], 'State'/State]), 
+	\+goal_achieved(Goal, State),
+    log(2, 'Choose_goal', 1, ['Goal'/Goal, 'Rest'/Rest]). 
 	
 choose_goal(Goal, [X|RestGoals], [X|Rest], State) :-
-	choose_goal(Goal, RestGoals, Rest, State).
+    log(3, 'Choose_goal', 1, ['GoalList'/[X|RestGoals], 'State'/State]),
+    log(1, 'Choose_goal', 2, ['GoalList'/[X|RestGoals], 'State'/State]),
+	choose_goal(Goal, RestGoals, Rest, State),
+	log(2, 'Choose_goal', 2, ['Goal'/Goal, 'Rest'/[X|Rest]]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa akcję (Action), która osiąga podany cel (Goal).
 % Cel może być zarówno ukonkretniony, jak i nie.
 % achieves(Goal, Action).
 
-achieves(on(X, Y), move(X, Z/(on(X, Z)), Y)).
+achieves(on(X, Y), move(X, Z/(on(X, Z)), Y)) :-
+    log(1, 'Achieves', 1, ['Goal'/on(X, Y)]),
+    log(2, 'Achieves', 1, ['Action'/move(X, Z/(on(X, Z)), Y)]).
 
-achieves(clear(X), move(Y/on(Y, X), X, Z/clear(Z))).
+achieves(clear(X), move(Y/on(Y, X), X, Z/clear(Z))) :-
+    log(1, 'Achieves', 2, ['Goal'/clear(X)]),
+    log(2, 'Achieves', 2, ['Action'/move(Y/on(Y, X), X, Z/clear(Z))]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa warunki (CondGoals) wykonania podanej akcji (Action),
 % które stają się celami dla następnego kroku algorytmu.
 % requires(Action, CondGoals).
 
-requires(move(X, _, Z), [clear(X), clear(Z)]) :-
-	no_slash(X).
+requires(move(X, Y, Z), [clear(X), clear(Z)]) :-
+    log(1, 'Requires', 1, ['Action'/move(X, Y, Z)]),
+	no_slash(X),
+    log(2, 'Requires', 1, ['CondGoals'/[clear(X), clear(Z)]]).
 	
-requires(move(X/C, _, _), [clear(X/C)]).
+requires(move(X/C, Y, Z), [clear(X/C)]) :-
+    log(3, 'Requires', 1, ['Action'/move(X, Y, Z)]),
+    log(1, 'Requires', 2, ['Action'/move(X/C, Y, Z)]),
+    log(2, 'Requires', 2, ['CondGoals'/[clear(X/C)]]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -223,24 +329,26 @@ handle_input(State, X, UserInput, Clear):-
     process_input(State, X, UserInput, Clear).
 
 process_input(_, _, Input, _):-
-    Input \= 'nawrut'.
+    Input \= 'nawrót'.
 
 process_input(State, X, Input, Clear) :-
-    Input \= 'nawrut',
+    Input \= 'nawrót',
 	handle_input(State, X, Input, Clear).
 
-inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
+inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, UserInput)) :-
+    log(1, 'Inst_action', 1, ['Action'/move(X, Y, Z), 'Cond'/Cond, 'State'/State]),
 	handle_input(State, X, UserInput, _),
     inst1(X, Cond, State, InstX, Rest), write(Rest),
 	inst2(Y, Cond, State, InstY),
-	nl,write('Utworzona akcja: move('), write(X), write(','), write(Y), write(','), write(UserInput),write(')'), nl.
+	nl,write('Utworzona akcja: move('), write(X), write(','), write(Y), write(','), write(UserInput),write(')'), nl,
+    log(2, 'Inst_action', 1, ['InstAction'/move(InstX, InstY, UserInput)]).
 
 inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)) :-
     nl, write('Nawrót'), nl,
-    inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)).
+    inst_action(move(X, Y, _), Cond, State, move(InstX, InstY, UserInput)),
 
 %inst_action(move(X, Y, Z), Cond, State, move(InstX, InstY, InstZ)) :-
-%    inst1(X, Cond, State, InstX, Rest),%
+%   inst1(X, Cond, State, InstX, Rest),%
 %	inst2(Y, Cond, State, InstY),
 %	inst3(Z, Cond, Rest, InstZ).
 
@@ -272,13 +380,16 @@ inst2(Y/Cond, on(_,_), State, Y) :-
 	goal_achieved(Cond, State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Wykorzystywane metody były pomocne jedynie
+% gdy klient nie miał wpływu na wybór
+%
 % Dla warunku clear() -
 % Z ukonkretnione
-inst3(Z, on(_,Z), _, Z).
+% inst3(Z, on(_,Z), _, Z).
 
 % Z jest strukturą
-inst3(Z/Cond, clear(_), State, Z):-
-    goal_achieved(Cond, State).
+% inst3(Z/Cond, clear(_), State, Z):-
+%    goal_achieved(Cond, State).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Określa stan (State2) osiągany ze stanu (State1)
@@ -286,10 +397,12 @@ inst3(Z/Cond, clear(_), State, Z):-
 % perform_action(State1, Action, State2).
 
 perform_action(State, move(X, Y, Z), [on(X,Z), clear(Y)|Rest]) :-
+    log(1, 'Perform_action', 1, ['State'/State, 'Action'/move(X, Y, Z)]),
 	part_of(clear(Z), State),
 	part_of(on(X, Y), State),
 	remove(State, clear(Z), RestState),
-	remove(RestState, on(X, Y), Rest).
+	remove(RestState, on(X, Y), Rest),
+    log(2, 'Perform_action', 1, ['OutState'/[on(X,Z), clear(Y)|Rest]]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
